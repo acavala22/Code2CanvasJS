@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="hr">
+   <head>
+      <meta charset="UTF-8">
+      <title>Crtanje sinusoide s GKS</title>
+   </head>
+   <body>
+      <h1>gks1</h1>
+      <canvas id="platno1" width="500" height="500" style="border:5px solid black">
+         Vaš preglednik ne podržava HTML5 canvas.
+      </canvas>
+      <script>
+         class GT3D {
+         	constructor() {
+         		this.identiteta();
+         	} // constructor
+         
+         	identiteta() {
+         		this.MT =
+         		  [[1, 0, 0, 0],
+         		   [0, 1, 0, 0],
+         		   [0, 0, 1, 0],
+         		   [0, 0, 0, 1]];
+         	} // identiteta
+         
+         	skaliraj(sx, sy, sz = 1) {
+         		this.puta( [[sx, 0, 0, 0],
+         					[0, sy, 0, 0],
+         					[0, 0, sz, 0],
+         					[0, 0, 0, 1]]);
+         	} // skaliraj
+         
+         	pomakni(px, py, pz = 0) {
+         		 this.puta( [[1, 0, 0, px],
+         					[0, 1, 0, py],
+         					[0, 0, 1, pz],
+         					[0, 0, 0, 1]]); // !!! pomnožiti s matricom translacije !!!
+         	} // pomakni
+         
+         	rotirajX(kut) {
+         		let phi = kut * Math.PI / 180;
+         		this.puta(
+         		 [[1,             0,              0, 0],
+         		  [0, Math.cos(phi), -Math.sin(phi), 0],
+         		  [0, Math.sin(phi),  Math.cos(phi), 0],
+         		  [0,             0,              0, 1]]);
+         	} // rotirajX
+         
+         	rotirajY(kut) {
+         		let phi = kut * Math.PI / 180;
+         		this.puta(
+         		 [[ Math.cos(phi), 0, Math.sin(phi), 0],
+         		  [ 0,             1,             0, 0],
+         		  [-Math.sin(phi), 0, Math.cos(phi), 0],
+         		  [ 0,             0,             0, 1]]);
+         	} // rotirajY
+         
+         	rotirajZ(kut) {
+         		let phi = kut * Math.PI / 180;
+         		this.puta(
+         		 [[Math.cos(phi), -Math.sin(phi), 0, 0],
+         		  [Math.sin(phi),  Math.cos(phi), 0, 0],
+         		  [0,              0,             1, 0],
+         		  [0,              0,             0, 1]]);
+         	} // rotirajZ
+         
+         	puta(mat) {
+         		let rezultat = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+         		for(let i = 0; i < 4; i++)
+         			for(let j = 0; j < 4; j++)
+         				for(let k = 0; k < 4; k++)
+         					rezultat[i][j] += this.MT[i][k] * mat[k][j];
+         		this.MT = rezultat;
+         	} // puta
+         spremi(){
+         this.stogMT.push(this.MT);
+         }
+         vrati(){
+         this.MT=this.stogMT.pop();
+         }
+         postaviKameru(x0, y0, z0, x1, y1, z1, Vx, Vy, Vz) {
+         	function normiraj(v) {
+         		let L = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+         		return [v[0] / L, v[1] / L, v[2] / L];
+         	} // normiraj
+         
+         	function vektorskiProdukt(ax, ay, az, bx, by, bz) {
+         		return [ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx];
+         	} // vektorskiProdukt
+         
+         	let N = [x0 - x1, y0 - y1, z0 - z1];
+         	let n = normiraj(N);
+         	let U = vektorskiProdukt(Vx, Vy, Vz, n[0], n[1], n[2]);
+         	let u = normiraj(U);
+         	let v = vektorskiProdukt(n[0], n[1], n[2], u[0], u[1], u[2]);
+         
+         	this.puta(
+         		[[u[0], u[1], u[2], -u[0] * x0 - u[1] * y0 - u[2] * z0],
+         		 [v[0], v[1], v[2], -v[0] * x0 - v[1] * y0 - v[2] * z0],
+         		 [n[0], n[1], n[2], -n[0] * x0 - n[1] * y0 - n[2] * z0],
+         		 [   0,    0,    0,    1]]
+         	) // puta
+         } // postavi kameru
+         
+         } // GT2D
+         
+         
+         class Ortho {
+         constructor(platno, xmin, xmax, ry, d) {
+         // u konstruktoru treba inicijalizirati sljedeće atribute:
+         this.xmin = xmin;
+         this.xmax = xmax;// - raspon x koordinate (xmin, xmax)
+         this.w = platno.width;
+         this.h = platno.height;// - dimenzije kanvasa (w i h)
+         this.g = platno.getContext("2d");// - grafički kontekst (g)
+         this.sx = (this.w - 0) / (this.xmax - this.xmin);
+         this.sy = -this.sx;// - faktore skaliranja (sx i sy)
+         this.py=(1-ry)*this.h;
+         this.px=-this.sx * this.xmin;// - pomak ishodišta (px, py)
+         this.d=d;
+         
+         this.ymax=this.py/this.sx;
+         this.ymin=this.ymax-this.h/this.sx;// - raspon y koordinate (ymin, ymax)
+         this.MT =  [[1, 0, 0, 0],
+         			[0, 1, 0, 0],
+         			[0, 0, 1, 0]
+         			[0, 0, 0, 1]];
+         
+         } // constructor
+         osi3D(L){
+         	
+         	this.postaviNa(0,0,0);
+         	this.koristiBoju("red");
+         	this.linijaDo(L,0,0);
+         	this.povuciLiniju();
+         	this.postaviNa(0,0,0);
+         	this.koristiBoju("green");
+         	this.linijaDo(0,L,0);
+         	this.povuciLiniju();
+         	this.postaviNa(0,0,0);
+         	this.koristiBoju("blue");
+         	this.linijaDo(0,0,L);
+         	this.povuciLiniju();
+         }
+         
+         trans(gt){
+         this.MT=gt.MT;
+         //gt=???
+         }
+         
+         postaviNa(x, y, z) {
+         
+         this.g.beginPath();
+         let xt=this.MT[0][0]*x+this.MT[0][1]*y+this.MT[0][2]*z+this.MT[0][3];
+         let yt=this.MT[1][0]*x+this.MT[1][1]*y+this.MT[1][2]*z+this.MT[1][3];
+         let zt=this.MT[2][0]*x+this.MT[2][1]*y+this.MT[2][2]*z+this.MT[2][3];
+         let xp=(-this.d/zt)*xt;
+         let yp=(-this.d/zt)*yt;
+         this.g.moveTo(this.sx*xp+this.px, this.sy*yp+this.py);// treba postaviti početak staze pozivom beginPath()
+         // x i y treba preračunati u zaslonske koordinate i pozvati moveTo()
+         } // postaviNa
+         
+         linijaDo(x, y, z) {
+         
+         let xt=this.MT[0][0]*x+this.MT[0][1]*y+this.MT[0][2]*z+this.MT[0][3];
+         let yt=this.MT[1][0]*x+this.MT[1][1]*y+this.MT[1][2]*z+this.MT[1][3];
+         let zt=this.MT[2][0]*x+this.MT[2][1]*y+this.MT[2][2]*z+this.MT[2][3];
+         let xp=(-this.d/zt)*xt;
+         let yp=(-this.d/zt)*yt;
+         this.g.lineTo(this.sx*xp+this.px, this.sy*yp+this.py);
+         
+         // x i y treba preračunati u zaslonske koordinate i pozvati lineTo()
+         } // linijaDo
+         
+         koristiBoju(c) {
+         this.currentColor = c;
+         this.g.strokeStyle = c;
+         // atributu strokeStyle pridružiti boju c
+         } // koristiBoju
+         
+         povuciLiniju() {
+         this.g.stroke();
+         // pozvati stroke()
+         } //povuciLiniju
+         pravac(k,l){
+         this.postaviNa(this.xmin,this.xmin*k+l);
+         this.linijaDo(this.xmax,this.xmax*k+l);
+         this.povuciLiniju();
+         }
+         elipsa(a,b,boja){
+         var aa=a;
+         var bb=b;
+         
+         this.koristiBoju(boja);
+         this.postaviNa(a,0);
+         
+         for(let i=0;i<=360;i++){
+         const x=aa*Math.cos(i * (Math.PI / 180));
+         const y=-bb*Math.sin(i * (Math.PI / 180));
+         this.linijaDo(x,y,this.z=0);
+         }
+         
+         this.povuciLiniju();
+         }
+         
+         ocisti(){
+         	  this.g.clearRect(0, 0, this.w, this.h);
+         		 }
+         
+         kocka(aa,boja){
+         var a=aa;
+         
+         this.koristiBoju(boja);
+         this.postaviNa(0,0,0);
+         this.linijaDo(a,0,0);
+         this.linijaDo(a,a,0);
+         this.linijaDo(0,a,0);
+         this.linijaDo(0,0,0);
+         this.povuciLiniju();
+         this.postaviNa(0,0,a);
+         this.linijaDo(a,0,a);
+         this.linijaDo(a,a,a);
+         this.linijaDo(0,a,a);
+         this.linijaDo(0,0,a);
+         this.povuciLiniju();
+         this.postaviNa(0,0,0);
+         this.linijaDo(0,0,a);
+         this.povuciLiniju();
+         this.postaviNa(a,0,0);
+         this.linijaDo(a,0,a);
+         this.povuciLiniju();
+         this.postaviNa(a,a,0);
+         this.linijaDo(a,a,a);
+         this.povuciLiniju();
+         this.postaviNa(0,a,0);
+         this.linijaDo(0,a,a);
+         this.povuciLiniju();
+         
+         }
+         stozac(R,H,n,boja){
+         this.postaviNa(r,0,0);
+         this.koristiBoju(boja);
+         var r=R;
+           for (let i = 0; i <= 360; i=i+n) {
+         				 const x = r * Math.cos(i*(Math.PI/180));
+         				 const y = r * Math.sin(i*(Math.PI/180));
+         this.linijaDo(x,y,0);
+         this.linijaDo(0,0,H);
+         }
+           for (let i = 0; i <= 360; i=i+n) {
+         				 const x = r * Math.cos(i*(Math.PI/180));
+         				 const y = r * Math.sin(i*(Math.PI/180));
+         this.linijaDo(x,y,0);
+         }
+         
+         this.povuciLiniju();
+         }
+         
+         crtajSferu(R, m, n, boja) {
+            let phiStep = 360 / m;
+            let thetaStep = 180 / (n + 1);
+         //meridijani
+            for (let i = 1; i <= n/2; i++) {
+                let theta = (180 / (n + 1)) * i;
+                let rho = R * Math.sin(theta * Math.PI / 180);
+                let z = R * Math.cos(theta * Math.PI / 180);
+         
+                this.koristiBoju(boja);
+         
+                for (let j = 0; j <= m; j++) {
+                    let phi = j * phiStep;
+                    const x = rho * Math.cos(phi * Math.PI / 180);
+                    const y = rho * Math.sin(phi * Math.PI / 180);
+         
+                    this.postaviNa(x, y, z);
+         
+                    const X = rho * Math.cos((phi + phiStep) * Math.PI / 180);
+                    const Y = rho * Math.sin((phi + phiStep) * Math.PI / 180);
+         
+                    this.linijaDo(X, Y, z);
+                    this.povuciLiniju();
+                }
+            }
+         //paralele
+            for (let j = 0; j <= m; j++) {
+                let phi = j * phiStep;
+                this.koristiBoju(boja);
+         
+                for (let i = 0; i <= n/2; i++) {
+                    let theta = (180 / (n + 1)) * i;
+                    let rho = R * Math.sin(theta * Math.PI / 180);
+                    let z = R * Math.cos(theta * Math.PI / 180);
+         
+                    const x = rho * Math.cos(phi * Math.PI / 180);
+                    const y = rho * Math.sin(phi * Math.PI / 180);
+         
+                    this.postaviNa(x, y, z);
+         
+                    const THETA = theta + thetaStep;
+                    let RHO = R * Math.sin(THETA * Math.PI / 180);
+                    let Z = R * Math.cos(THETA * Math.PI / 180);
+         
+                    const X = RHO * Math.cos(phi * Math.PI / 180);
+                    const Y = RHO * Math.sin(phi * Math.PI / 180);
+         
+                    this.linijaDo(X, Y, Z);
+                    this.povuciLiniju();
+                }
+            }
+         }
+         
+         valjak(R,H,n,boja){
+         
+         this.koristiBoju(boja);
+         var r=R;
+         this.postaviNa(r,0,0);
+         
+         
+           for (let i = 0; i <= 360; i=i+n) {
+         				 const x = r * Math.cos(i*(Math.PI/180));
+         				 const y = r * Math.sin(i*(Math.PI/180));
+         
+         this.linijaDo(x,y,0);
+         }
+         this.povuciLiniju();
+         this.postaviNa(r,0,H);
+         
+           for (let i = 0; i <= 360; i=i+n) {
+         				 const x = r * Math.cos(i*(Math.PI/180));
+         				 const y = r * Math.sin(i*(Math.PI/180));
+         this.linijaDo(x,y,H);
+         }
+         
+         
+         this.povuciLiniju();
+         
+         for (let i=0; i<=360; i=i+n){
+         	const x = r * Math.cos(i*(Math.PI/180));
+         	const y = r * Math.sin(i*(Math.PI/180));
+         	this.postaviNa(x,y,0);
+         	this.linijaDo(x,y,H);
+         	this.povuciLiniju();
+         	
+         }
+         }
+         
+         
+         } // GKS
+         
+         const canvas = document.getElementById("platno1");
+         const gt3d=new GT3D();
+         const ort=new Ortho(platno1,-15,15,1/2,25);
+         
+         
+         
+         
+         /*gt3d.rotirajX(20);
+         gt3d.rotirajY(-120);
+         gt3d.rotirajX(-90);
+         ort.trans(gt3d);
+         */
+         gt3d.postaviKameru(45, 20, 30, 0, 0, 6, 0, 0, 6);
+         ort.trans(gt3d);
+         
+         let m=15;
+         let n=15;
+         for(let i=0;i<31;i++){
+         ort.koristiBoju("lightgreen");
+         ort.postaviNa(-m,n-i,0);
+         ort.linijaDo(m,n-i,0);
+         ort.povuciLiniju();
+         }
+         
+         for(let j=0;j<31;j++){
+         ort.koristiBoju("lightgreen");
+         ort.postaviNa(-m+j,-n,0);
+         ort.linijaDo(-m+j,n,0);
+         ort.povuciLiniju();
+         }
+         
+         ort.osi3D(4);
+         
+          
+         ort.stozac(8,15,10,"black");
+         gt3d.pomakni(0,0,12);
+         ort.trans(gt3d);
+         ort.valjak(2,4,15,"black");
+         gt3d.rotirajX(90);
+         gt3d.pomakni(0,2,-17);
+         ort.trans(gt3d);
+         ort.valjak(1,15,25,"black");
+         gt3d.pomakni(0,0,19);
+         ort.trans(gt3d);
+         ort.valjak(1,15,25,"black");
+         gt3d.pomakni(0,0,20);
+         gt3d.rotirajY(90);
+         ort.trans(gt3d);
+         ort.crtajSferu(5,32,15,"black");
+         gt3d.pomakni(44,0,0);
+         gt3d.rotirajY(180);
+         ort.trans(gt3d);
+         ort.crtajSferu(5,32,15,"black");
+         
+         
+         
+         
+         
+         
+         
+         
+         
+      </script>
+   </body>

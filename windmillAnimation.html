@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="hr">
+   <head>
+      <meta charset="UTF-8">
+      <title>Crtanje linija</title>
+   </head>
+   <body>
+      <h1>Crtanje linija</h1>
+      <canvas id="canvas1" width="500" height="500" style="border:5px solid black">
+         Vaš preglednik ne podržava HTML5 canvas.
+      </canvas>
+      <script>
+         window.onload = function() {
+     // priprema
+     var platno1 = document.getElementById("canvas1");
+     if (!platno1) alert("Greška - nema platna!");
+     var w = platno1.width;
+     var h = platno1.height;
+     var ctx = platno1.getContext("2d");
+
+
+
+     // iscrtavanje
+     var xmax = 5,
+         xmin = -5;
+     var ymax = 5,
+         ymin = -5;
+
+     var sx = (w - 0) / (xmax - xmin);
+     var sy = (0 - h) / (ymax - ymin);
+     var px = -sx * xmin;
+     var py = -sy * ymax - 50;
+
+     var r = 1.5;
+
+
+     function pozadina() {
+         // Polukrug
+         ctx.beginPath();
+         ctx.moveTo(r * sx + px, 0 * sy + py);
+         for (let i = 0; i <= 180; i++) {
+             const x = r * Math.cos(i * (Math.PI / 180));
+             const y = r * Math.sin(i * (Math.PI / 180));
+             ctx.lineTo(x * sx + px, y * sy + py);
+         }
+         //gornja polovina elispe
+         var a = 1.5;
+         var b = 0.5;
+         ctx.moveTo(r * sx + px, 0 * sy + py);
+         for (let i = 0; i <= 180; i++) {
+             const x = a * Math.cos(i * (Math.PI / 180));
+             const y = -b * Math.sin(i * (Math.PI / 180));
+             ctx.lineTo(x * sx + px, y * sy + py);
+         }
+         ctx.lineTo(-2.5 * sx + px, -4 * sy + py);
+         ctx.stroke();
+
+         //donja polovina elipse
+         ctx.beginPath();
+         var aa = 2.5;
+         var bb = 0.75;
+
+         for (let i = 0; i <= 180; i++) {
+             const x = aa * Math.cos(i * (Math.PI / 180));
+             const y = -bb * Math.sin(i * (Math.PI / 180));
+             ctx.lineTo(x * sx + px, (y * sy + py) + 200);
+         }
+         ctx.moveTo(2.5 * sx + px, -4 * sy + py);
+         ctx.lineTo(2.5 * sx + px - 50, -4 * sy + py - 200);
+
+         ctx.stroke();
+     }
+
+     ctx.beginPath();
+
+
+     function krilo() {
+
+         for (let i = 0; i < 16; i++) {
+             for (let j = 0; j < 3; j++) {
+                 const x = j * 10;
+                 const y = i * 10;
+                 ctx.beginPath();
+                 ctx.rect(x, y, 10, 10);
+                 ctx.strokeStyle = "red";
+                 ctx.stroke();
+             }
+         }
+     }
+
+
+     function animacija() {
+         ctx.fillStyle = "yellow";
+         ctx.fillRect(0, 0, w, h); // g.clearRect(0, 0, w, h);
+         pozadina();
+
+         for (let x = 0; x < 4; x++) {
+             ctx.save();
+             ctx.translate(0 * sx + px, 0 * sy + py);
+             ctx.rotate(x * 90 * (Math.PI / 180) + (theta / 100));
+             krilo();
+             ctx.restore();
+         }
+         theta -= 0.75;
+         requestAnimationFrame(animacija);
+     }
+
+     //animiranje
+     var theta = 0;
+     animacija();
+
+
+ }
+      </script>
+   </body>
+</html>

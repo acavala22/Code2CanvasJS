@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="hr">
+   <head>
+      <meta charset="UTF-8">
+      <title>Crtanje sinusoide s GKS</title>
+   </head>
+   <body>
+      <h1>gks1</h1>
+      <canvas id="platno1" width="500" height="500" style="border:5px solid black">
+         Vaš preglednik ne podržava HTML5 canvas.
+      </canvas>
+      <script>
+         class GKS {
+     constructor(canvas, xmin, xmax, ymin, ymax) {
+         this.canvas = canvas;
+         this.context = canvas.getContext("2d");
+         this.xmin = xmin;
+         this.xmax = xmax;
+         this.ymin = ymin;
+         this.ymax = ymax;
+         this.xScale = canvas.width / (xmax - xmin);
+         this.yScale = canvas.height / (ymax - ymin);
+         this.xOffset = -xmin * this.xScale;
+         this.yOffset = canvas.height + ymin * this.yScale;
+         this.currentX = 0;
+         this.currentY = 0;
+         this.currentColor = "black";
+     }
+
+     postaviNa(x, y) {
+         this.currentX = x;
+         this.currentY = y;
+         this.context.beginPath();
+         this.context.moveTo(this.globalToCanvasX(x), this.globalToCanvasY(y));
+     }
+
+     linijaDo(x, y) {
+         const canvasX = this.globalToCanvasX(x);
+         const canvasY = this.globalToCanvasY(y);
+         this.context.lineTo(canvasX, canvasY);
+         this.currentX = x;
+         this.currentY = y;
+     }
+
+     koristiBoju(c) {
+         this.currentColor = c;
+         this.context.strokeStyle = c;
+     }
+
+     povuciLiniju() {
+         this.context.stroke();
+     }
+
+     globalToCanvasX(x) {
+         return x * this.xScale + this.xOffset;
+     }
+
+     globalToCanvasY(y) {
+         return this.yOffset - y * this.yScale;
+     }
+ }
+
+ class GKS2 {
+     constructor(platno, xmin, xmax, ry) {
+         // u konstruktoru treba inicijalizirati sljedeće atribute:
+         this.xmin = xmin;
+         this.xmax = xmax; // - raspon x koordinate (xmin, xmax)
+         this.w = platno.width;
+         this.h = platno.height; // - dimenzije kanvasa (w i h)
+         this.g = platno.getContext("2d"); // - grafički kontekst (g)
+         this.sx = (this.w - 0) / (this.xmax - this.xmin);
+         this.sy = -this.sx; // - faktore skaliranja (sx i sy)
+         this.py = (1 - ry) * this.h;
+         this.px = -this.sx * this.xmin; // - pomak ishodišta (px, py)
+         this.ymax = this.py / this.sx;
+         this.ymin = this.ymax - this.h / this.sx; // - raspon y koordinate (ymin, ymax)
+     } // constructor
+
+     iscrtajOsi() {
+         this.g.beginPath();
+         this.g.moveTo(0, this.py);
+         this.g.lineTo(this.w, this.py);
+         this.g.moveTo(this.px, 0);
+         this.g.lineTo(this.px, this.h);
+         this.g.strokeStyle = "black";
+         this.g.stroke();
+
+
+         // dodavanje crtica na x
+         for (let x = 1; x < this.xmax; x++) {
+             const canvasX = this.sx * x + this.px;
+             this.g.moveTo(canvasX, this.py - 5); // Pomičemo se prema dolje za crticu
+             this.g.lineTo(canvasX, this.py + 5); // Pomičemo se prema gore za crticu
+
+             // dodavanje crtica na negativnoj strani x
+             const negCanvasX = this.sx * -x + this.px;
+             this.g.moveTo(negCanvasX, this.py - 5); // Pomičemo se prema dolje za crticu
+             this.g.lineTo(negCanvasX, this.py + 5); // Pomičemo se prema gore za crticu
+         }
+
+         // dodavanje crtica na y
+         for (let y = 1; y < this.ymax; y++) {
+             const canvasY = this.sy * y + this.py;
+             this.g.moveTo(this.px - 5, canvasY); // Pomičemo se ulijevo za crticu
+             this.g.lineTo(this.px + 5, canvasY); // Pomičemo se udesno za crticu
+
+             // dodavanje crtica na negativnoj strani y
+             const negCanvasY = this.sy * -y + this.py;
+             this.g.moveTo(this.px - 5, negCanvasY); // Pomičemo se ulijevo za crticu
+             this.g.lineTo(this.px + 5, negCanvasY); // Pomičemo se udesno za crticu
+         }
+
+
+         this.g.strokeStyle = "black"; // Boja osi (crna)
+         this.g.stroke();
+     }
+
+     postaviNa(x, y) {
+
+         this.g.beginPath();
+         this.g.moveTo(this.sx * x + this.px, this.sy * y + this.py); // treba postaviti početak staze pozivom beginPath()
+         // x i y treba preračunati u zaslonske koordinate i pozvati moveTo()
+     } // postaviNa
+
+     linijaDo(x, y) {
+         const canvasX = this.sx * x + this.px;
+         const canvasY = this.sy * y + this.py;
+         this.g.lineTo(canvasX, canvasY);
+
+         // x i y treba preračunati u zaslonske koordinate i pozvati lineTo()
+     } // linijaDo
+
+     koristiBoju(c) {
+         this.currentColor = c;
+         this.g.strokeStyle = c;
+         // atributu strokeStyle pridružiti boju c
+     } // koristiBoju
+
+     povuciLiniju() {
+         this.g.stroke();
+         // pozvati stroke()
+     } //povuciLiniju
+ } // GKS
+
+ const canvas = document.getElementById("platno1");
+ const gks1 = new GKS2(platno1, -10, 10, 1 / 2);
+
+ //za srediste u sredini
+ gks1.px = canvas.width / 2;
+ gks1.py = canvas.height / 2;
+
+ //osi 
+ gks1.koristiBoju("black");
+ gks1.iscrtajOsi();
+
+ const brojTocki = 1000;
+ const korak = (2 * Math.PI) / brojTocki;
+
+
+ const faktoriSkaliranja = [2, 4, 6, 8];
+
+ faktoriSkaliranja.forEach((faktor) => {
+     gks1.koristiBoju("red");
+
+     gks1.postaviNa(Math.cos(6 * 0) * Math.cos(0) * faktor, Math.cos(6 * 0) * Math.sin(0) * faktor);
+
+     for (let i = 1; i <= brojTocki; i++) {
+         const theta = i * korak;
+         const r = Math.cos(6 * theta) * faktor;
+
+         const x = r * Math.cos(theta);
+         const y = r * Math.sin(theta);
+
+         gks1.linijaDo(x, y);
+     }
+
+     gks1.povuciLiniju();
+ });
+      </script>
+   </body>
+</html>

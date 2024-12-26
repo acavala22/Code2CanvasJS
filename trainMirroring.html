@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="hr">
+   <head>
+      <meta charset="UTF-8">
+      <title>Crtanje sinusoide s GKS</title>
+   </head>
+   <body>
+      <h1>gks1</h1>
+      <canvas id="platno1" width="500" height="500" style="border:5px solid black">
+         Vaš preglednik ne podržava HTML5 canvas.
+      </canvas>
+      <script>
+         class GT2D {
+         constructor() {
+         this.identiteta();
+         this.stogMT=[]; // inicijalizacija jediničnom matricom
+         } // constructor
+         
+         identiteta() {
+         this.mt =  [[1, 0, 0],
+           [0, 1, 0],
+           [0, 0, 1]];
+         } // identiteta
+         
+         skaliraj(sx, sy) {
+         this.puta ([[sx, 0, 0],
+         [0, sy, 0],
+         [0, 0,  1]]); // ovdje umetnuti matricu skaliranja
+         } // skaliraj
+         
+         rotiraj(fi) {
+         let r=fi*Math.PI/180;
+         console.log(r);// kut treba preračunati u radijane
+         this.puta([[Math.cos(r), -Math.sin(r), 0],
+         [Math.sin(r), Math.cos(r), 0],
+         [0,0,1]]);// ovdje umetnuti matricu rotacije
+         } // rotiraj
+         
+         pomakni(px, py) {
+         this.puta([[1,0,px],
+         [0,1,py],
+         [0,0,1]]);
+         // ovdje umetnuti matricu translacije
+         } // pomakni
+         
+         zrcaliNaX() {
+         this.puta([[1,0,0],
+         [0,-1,0],
+         [0,0,1]]);// ovdje umetnuti matricu zrcaljenja na x osi
+         } // zrcaliNaX
+         
+         zrcaliNaY() {
+         this.puta([[-1,0,0],
+         [0,1,0],
+         [0,0,1]]);// ovdje umetnuti matricu zrcaljenja na y osi
+         } // zrcaliNaY
+         puta(mat) {
+                 let rezultat = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+                 for(let i = 0; i < 3; i++)
+                     for(let j = 0; j < 3; j++)
+                         for(let k = 0; k < 3; k++)
+                             rezultat[i][j] += this.mt[i][k]*mat[k][j];
+                 this.mt = rezultat;
+             } // puta
+         spremi(){
+         this.stogMT.push(this.mt);
+         }
+         vrati(){
+         this.mt=this.stogMT.pop();
+         }
+         
+         } // GT2D
+         
+         
+         class GKS2 {
+         constructor(platno, xmin, xmax, ry) {
+         // u konstruktoru treba inicijalizirati sljedeće atribute:
+         this.xmin = xmin;
+         this.xmax = xmax;// - raspon x koordinate (xmin, xmax)
+         this.w = platno.width;
+         this.h = platno.height;// - dimenzije kanvasa (w i h)
+         this.g = platno.getContext("2d");// - grafički kontekst (g)
+         this.sx = (this.w - 0) / (this.xmax - this.xmin);
+         this.sy = -this.sx;// - faktore skaliranja (sx i sy)
+         this.py=(1-ry)*this.h;
+         this.px=-this.sx * this.xmin;// - pomak ishodišta (px, py)
+         this.ymax=this.py/this.sx;
+         this.ymin=this.ymax-this.h/this.sx;// - raspon y koordinate (ymin, ymax)
+         this.mt =  [[1, 0, 0],
+         [0, 1, 0],
+         [0, 0, 1]];
+         
+         } // constructor
+         iscrtajOsi() {
+                         this.g.beginPath();
+                         this.g.moveTo(0, this.py);
+                         this.g.lineTo(this.w, this.py);
+                         this.g.moveTo(this.px, 0);
+                         this.g.lineTo(this.px, this.h);
+                         this.g.strokeStyle = "black";
+                         this.g.stroke();
+         
+                         // dodavanje crtica na x
+                         for (let x = 1; x < this.xmax; x++) {
+                             const canvasX = this.sx * x + this.px;
+                             this.g.moveTo(canvasX, this.py - 5);
+                             this.g.lineTo(canvasX, this.py + 5);
+         
+                             // dodavanje crtica na negativnoj strani x
+                             const negCanvasX = this.sx * -x + this.px;
+                             this.g.moveTo(negCanvasX, this.py - 5);
+                             this.g.lineTo(negCanvasX, this.py + 5);
+                         }
+         
+                         // dodavanje crtica na y
+                         for (let y = 1; y < this.ymax; y++) {
+                             const canvasY = this.sy * y + this.py;
+                             this.g.moveTo(this.px - 5, canvasY);
+                             this.g.lineTo(this.px + 5, canvasY);
+         
+                             // dodavanje crtica na negativnoj strani y
+                             const negCanvasY = this.sy * -y + this.py;
+                             this.g.moveTo(this.px - 5, negCanvasY);
+                             this.g.lineTo(this.px + 5, negCanvasY);
+                         }
+         
+                         this.g.strokeStyle = "black";
+                         this.g.stroke();
+                     }
+         
+         trans(gt){
+         this.mt=gt.mt;
+         //gt=???
+         }
+         
+         postaviNa(x, y) {
+         
+         this.g.beginPath();
+         let xt=this.mt[0][0]*x+this.mt[0][1]*y+this.mt[0][2];
+         let yt=this.mt[1][0]*x+this.mt[1][1]*y+this.mt[1][2];
+         this.g.moveTo(this.sx*xt+this.px, this.sy*yt+this.py);// treba postaviti početak staze pozivom beginPath()
+         // x i y treba preračunati u zaslonske koordinate i pozvati moveTo()
+         } // postaviNa
+         
+         linijaDo(x, y) {
+         
+         let xt=this.mt[0][0]*x+this.mt[0][1]*y+this.mt[0][2];
+         let yt=this.mt[1][0]*x+this.mt[1][1]*y+this.mt[1][2];
+         this.g.lineTo(this.sx*xt+this.px, this.sy*yt+this.py);
+         
+         // x i y treba preračunati u zaslonske koordinate i pozvati lineTo()
+         } // linijaDo
+         
+         koristiBoju(c) {
+         this.currentColor = c;
+         this.g.strokeStyle = c;
+         // atributu strokeStyle pridružiti boju c
+         } // koristiBoju
+         
+         povuciLiniju() {
+         this.g.stroke();
+         // pozvati stroke()
+         } //povuciLiniju
+         pravac(k,l){
+         this.postaviNa(this.xmin,this.xmin*k+l);
+         this.linijaDo(this.xmax,this.xmax*k+l);
+         this.povuciLiniju();
+         }
+         elipsa(a,b,boja){
+         var aa=a;
+         var bb=b;
+         
+         this.koristiBoju(boja);
+         this.postaviNa(a,0);
+         
+         for(let i=0;i<=360;i++){
+         const x=aa*Math.cos(i * (Math.PI / 180));
+         const y=-bb*Math.sin(i * (Math.PI / 180));
+         this.linijaDo(x,y);
+         }
+         
+         this.povuciLiniju();
+         }
+         
+         pravokutnik(a,b,boja){
+         var aa=a;
+         var bb=b;
+         
+         this.koristiBoju(boja);
+         this.postaviNa(aa,0);
+         this.linijaDo(0,0);
+         this.linijaDo(0,bb);
+         this.linijaDo(aa,bb);
+         this.linijaDo(aa,0);
+         this.povuciLiniju();
+         }
+         
+         
+         
+         } // GKS
+         
+         const canvas = document.getElementById("platno1");
+         const gt1=new GT2D();
+         const gt2=new GT2D();
+         const gks1=new GKS2(platno1,-14,16,1/4);
+         gks1.iscrtajOsi();
+         gt1.spremi();
+         //zrcaljenje
+         
+         var a=Math.atan(3)*180/Math.PI;
+         console.log(a);
+         gt1.pomakni(0,6);
+         gt1.rotiraj(a);
+         gt1.zrcaliNaX();
+         gt1.rotiraj(-a);
+         gt1.pomakni(0,-6);
+         gks1.trans(gt1);
+         //lokomotiva plava -zrcaljena
+         gt1.pomakni(4,1);
+         gks1.trans(gt1);
+         gks1.elipsa(1,1,"blue");
+         gt1.pomakni(6,0);
+         gks1.trans(gt1);
+         gks1.elipsa(1,1,"blue");
+         gt1.pomakni(-8,0);
+         gks1.trans(gt1);
+         gks1.pravokutnik(6,4);
+         gt1.pomakni(-0.5,1);
+         gks1.trans(gt1);
+         gks1.pravokutnik(0.5,2);
+         gt1.pomakni(6.5,-1);
+         gks1.trans(gt1);
+         gks1.pravokutnik(4,5);
+         gt1.pomakni(1,2);
+         gks1.trans(gt1);
+         gks1.pravokutnik(2,2);
+         gt1.pomakni(-1,3);
+         gks1.trans(gt1);
+         gks1.pravokutnik(5,0.5);
+         gt1.pomakni(-5,-1);
+         gks1.trans(gt1);
+         gks1.pravokutnik(2,3);
+         gt1.pomakni(3.5,5);
+         gt1.rotiraj(30);
+         gks1.trans(gt1);
+         gks1.elipsa(2,1);
+         gt1.pomakni(6,-2);
+         gt1.rotiraj(-15);
+         gks1.trans(gt1);
+         gks1.elipsa(3,1.5);
+         gt1.vrati(); 
+         
+         //pravac
+         gks1.trans(gt1);
+         gks1.koristiBoju("red");
+         gks1.pravac(3,6);
+         //crna lokomotiva 
+         gt1.vrati();
+         gt2.pomakni(4,1);
+         gks1.trans(gt2);
+         gks1.elipsa(1,1,"black");
+         gt2.pomakni(6,0);
+         gks1.trans(gt2);
+         gks1.elipsa(1,1,"black");
+         gt2.pomakni(-8,0);
+         gks1.trans(gt2);
+         gks1.pravokutnik(6,4);
+         gt2.pomakni(-0.5,1);
+         gks1.trans(gt2);
+         gks1.pravokutnik(0.5,2);
+         gt2.pomakni(6.5,-1);
+         gks1.trans(gt2);
+         gks1.pravokutnik(4,5);
+         gt2.pomakni(1,2);
+         gks1.trans(gt2);
+         gks1.pravokutnik(2,2);
+         gt2.pomakni(-1,3);
+         gks1.trans(gt2);
+         gks1.pravokutnik(5,0.5);
+         gt2.pomakni(-5,-1);
+         gks1.trans(gt2);
+         gks1.pravokutnik(2,3);
+         gt2.pomakni(3.5,5);
+         gt2.rotiraj(30);
+         gks1.trans(gt2);
+         gks1.elipsa(2,1);
+         gt2.pomakni(6,-2);
+         gt2.rotiraj(-15);
+         gks1.trans(gt2);
+         gks1.elipsa(3,1.5);
+         gt2.vrati(); 
+         
+         
+         
+      </script>
+   </body>
